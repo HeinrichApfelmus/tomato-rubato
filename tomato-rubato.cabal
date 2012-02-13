@@ -1,0 +1,46 @@
+Name:               tomato-rubato
+Version:            0.1.0.0
+Synopsis:           Easy to use library for audio programming.
+Description:
+  An easy to use library for live audio programming in Haskell.
+  Instant gratification from your speakers by typing into GHCi!
+  .
+  The audio backend is implement by communicating with a SuperCollider server.
+  This means that you have to install SuperCollider and start the server
+  before using this library.
+  .
+  Stability forecast: This is pre-alpha quality software.
+  Nothing works and everything changes.
+  
+Category:           Data
+License:            BSD3
+License-file:       LICENSE
+Author:             Heinrich Apfelmus
+Maintainer:         Heinrich Apfelmus <apfelmus at quantentunnel de>
+Homepage:           http://www.haskell.org/haskellwiki/tomato-rubato
+Copyright:          (c) Heinrich Apfelmus 2012
+
+build-type:         Simple
+cabal-version:      >= 1.6
+
+extra-source-files: README.md
+
+source-repository head
+    type:           git
+    location:       git://github.com/HeinrichApfelmus/tomato-rubato.git
+
+Library
+    hs-source-dirs:     src
+    build-depends:      base == 4.*, containers == 0.4.*,
+                        transformers == 0.2.*, process == 1.0.*,
+                        hsc3 == 0.9.*, hosc == 0.9.*, PortMidi == 0.1.*
+    ghc-options:        -Wall
+    exposed-modules:    Demonstrate,
+                        Sound.Tomato,
+                        Sound.Tomato.MIDI, 
+                        Sound.Tomato.MIX,
+                        Sound.Tomato.Synthesis,
+                        Sound.Tomato.Theory,
+                        Sound.Tomato.Types
+    other-modules:      Sound.Tomato.Internal.SuperCollider
+
