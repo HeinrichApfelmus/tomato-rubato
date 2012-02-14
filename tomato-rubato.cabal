@@ -34,11 +34,11 @@ Library
     build-depends:      base == 4.*, containers == 0.4.*,
                         transformers == 0.2.*, process == 1.0.*,
                         hsc3 == 0.9.*, hosc == 0.9.*, PortMidi == 0.1.*
-    ghc-options:        -Wall
+--    ghc-options:        -Wall
     exposed-modules:    Demonstrate,
                         Sound.Tomato,
                         Sound.Tomato.MIDI, 
-                        Sound.Tomato.MIX,
+                        Sound.Tomato.Mix,
                         Sound.Tomato.Synthesis,
                         Sound.Tomato.Theory,
                         Sound.Tomato.Types
