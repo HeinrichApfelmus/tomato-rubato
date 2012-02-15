@@ -1,16 +1,16 @@
 {-----------------------------------------------------------------------------
     tomato-rubato
 ------------------------------------------------------------------------------}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module Sound.Tomato.Synthesis (
     -- * Synopsis
     -- | Basic combinators for sound synthesis and processing.
     
     -- * Sound data
-    Sound, mix, play, render,
+    Sound(..), mix, play, render,
     
     -- * Parameters
-    Behavior, parameter, Duration,
+    Behavior(..), parameter, Duration,
     
     -- * Fundamental wave forms and sounds
     sine, sawtooth, brownNoise,
@@ -19,16 +19,22 @@ module Sound.Tomato.Synthesis (
     lowpass, highpass, bandpass, delay, pan,
     
     -- * Envelopes
-    Envelope, xLine, percussive
+    Envelope, xLine, percussive,
     
+    -- * Internal
     ) where
 
 import Control.Concurrent
+import Data.Ratio
 
 import Demonstrate
 
 import qualified Sound.Tomato.Internal.SuperCollider as SC
+import qualified Sound.SC3.UGen.UGen as SC
 import Sound.Tomato.Types
+
+liftNewtype1 on un f = on . f . un
+liftNewtype2 on un f x y = on $ f (un x) (un y)
 
 {-----------------------------------------------------------------------------
     Sound data
@@ -36,24 +42,28 @@ import Sound.Tomato.Types
 -- | Represents a sound.
 -- 
 -- Technical details: 44.1kHz, stereo. 
--- TODO: Sometimes mono for unknown reasons.
-type Sound = SC.UGen
+newtype Sound = Sound { soundToUGen :: SC.UGen }
+-- Represented as a two-channel unit generator
+
+-- | Lifting functions for sounds
+liftSound1 = liftNewtype1 Sound soundToUGen
+liftSound2 = liftNewtype2 Sound soundToUGen
 
 -- | Combine to sounds by mixing them.
 mix :: Sound -> Sound -> Sound
-mix = (+)
+mix = liftSound2 (+)
 
 -- | Play a sound on the speakers.
 -- Press any key to interrupt.
 play :: Sound -> IO ()
 play sound = SC.withSuperCollider $ do
-    SC.audition $ SC.out 0 (0.2 * sound)
+    SC.audition $ SC.out 0 (0.2 * soundToUGen sound)
     getChar
     return ()
 
 instance Demonstrate Sound where
     demo sound = SC.withSuperCollider $ do
-        SC.audition $ SC.out 0 (0.2 * sound)
+        SC.audition $ SC.out 0 (0.2 * soundToUGen sound)
         threadDelay $ 60*10^6 -- wait one minute
 
 -- TODO: Change the duration of an audio Behavior
@@ -74,14 +84,46 @@ type Sample = ()
 -- 
 -- By using time-varying values as parameters, we can modulate them easily.
 -- TODO: Opaque type. Different oscillators for audio and frequencies, etc.
-type Behavior a = SC.UGen
+newtype Behavior a = B { getUGen :: SC.UGen } deriving (Eq,Show)
+
+liftBehavior1 = liftNewtype1 B getUGen
+liftBehavior2 = liftNewtype2 B getUGen
+
+-- | Numeric instances for behaviors
+instance Num (Behavior Double) where
+    (+) = liftBehavior2 (+)
+    (-) = liftBehavior2 (-)
+    (*) = liftBehavior2 (*)
+    fromInteger = B . SC.constant
+    abs    = undefined
+    signum = undefined
+
+instance Fractional (Behavior Double) where
+    (/) = liftBehavior2 (/)
+    fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
+
+instance Floating (Behavior Double) where
+    pi  = B $ SC.constant  pi
+    sin = liftBehavior1 $ \freq -> SC.sinOsc SC.AR freq (SC.constant 0)
+    -- other functions are yet to be implemented
+    cos = undefined
+    exp = undefined
+    log = undefined
+    asin = undefined
+    atan = undefined
+    acos = undefined
+    sinh = undefined
+    cosh = undefined
+    asinh = undefined
+    acosh = undefined
+    atanh = undefined
 
 -- | Represents a time duration in seconds.
 type Duration = Double
 
 -- | Named parameter.
 parameter :: Name -> Double -> Behavior Double
-parameter = SC.control SC.KR
+parameter name initialValue = B $ SC.control SC.KR name initialValue
 
 {-----------------------------------------------------------------------------
     Fundamental wave forms and sounds
@@ -90,20 +132,20 @@ parameter = SC.control SC.KR
 --
 -- Sounds like a free telephone line.
 sine :: Behavior Frequency -> Sound
-sine freq = SC.sinOsc SC.AR freq (SC.constant 0)
+sine freq = Sound $ monoToStereo $ SC.sinOsc SC.AR (getUGen freq) (SC.constant 0)
 
 -- | Sawtooth wave.
 -- 
 -- Rasping. Best used with a lowpass to smooth out the harsh high frequencies.
 sawtooth :: Behavior Frequency -> Sound
-sawtooth freq = SC.saw SC.AR freq
+sawtooth freq = Sound $ monoToStereo $ SC.saw SC.AR (getUGen freq)
 
 -- | Brown noise (incoherent)
 -- 
 -- Generates brown noise, i.e. the spectrum falls off in power by 6 dB per octave.
 -- Reminds me of rain or a flowing river, but harsher.
 brownNoise :: Sound
-brownNoise = SC.brownNoise (0 :: Int) SC.AR
+brownNoise = Sound $ monoToStereo $ SC.brownNoise (0 :: Int) SC.AR
 
 {-----------------------------------------------------------------------------
     Sound processing with filters
@@ -111,29 +153,48 @@ brownNoise = SC.brownNoise (0 :: Int) SC.AR
 -- | Lowpass filter.
 -- Attenuates frequencies above the given one. 12 dB / octave.
 lowpass :: Behavior Frequency -> Sound -> Sound
-lowpass  freq sound = SC.lpf sound freq
+lowpass  freq = liftSound1 $ \ugen -> SC.lpf ugen (getUGen freq)
 
 -- | Highpass filter.
 -- Attenuates frequencies below the given one. 12 dB / octave.
 highpass :: Behavior Frequency -> Sound -> Sound
-highpass freq sound = SC.hpf sound freq
+highpass freq = liftSound1 $ \ugen -> SC.hpf ugen (getUGen freq)
 
 -- | Bandpass filter. (12 dB / octave)
 -- 
 -- > bandpass frequency rq 
 bandpass :: Behavior Frequency -> Behavior Double -> Sound -> Sound
-bandpass freq rq sound = SC.bpf sound freq rq
+bandpass freq rq = liftSound1 $ \ugen -> SC.bpf ugen (getUGen freq) (getUGen rq)
 
 -- | Delay the sound by a specified amount of time.
 -- Useful for echo and chorus effects.
 -- Maximum delay time is 0.1 seconds.
 delay :: Behavior Duration -> Sound -> Sound
-delay duration sound = SC.delayN sound (SC.constant 0.1) duration
+delay duration = liftSound1 $ \ugen -> SC.delayN ugen (SC.constant 0.1) (getUGen duration)
 
 -- | Equal power stereo pan a mono source.
 -- Input from -1 (left speaker) to +1 (right speaker)
 pan :: Behavior Double -> Sound -> Sound
-pan position sound = SC.pan2 sound position (SC.constant 0.3)
+pan position sound = Sound $ SC.balance2 l r (getUGen position) (SC.constant 1)
+    where (l,r) = getStereoChannels $ soundToUGen sound
+
+{-----------------------------------------------------------------------------
+    SuperCollider utilities
+------------------------------------------------------------------------------}
+-- | Retrieve the two stereo channels of a multi-channel-expanded sound source
+getStereoChannels :: SC.UGen -> (SC.UGen, SC.UGen)
+getStereoChannels ugen
+    | isStereo ugen = let [u1,u2] = SC.mceExtend 2 ugen in (u1,u2)
+    | otherwise     = error "Sound.Tomato.Synthesis: expecting stereo sound"
+
+isStereo ugen = SC.isMCE ugen && SC.mceDegree ugen == 2
+isMono   ugen = (SC.isMCE ugen && SC.mceDegree ugen == 1) || (not $ SC.isMCE ugen)
+
+-- | Convert a mono UGen to a stereo UGen by duplicating it
+monoToStereo :: SC.UGen -> SC.UGen
+monoToStereo ugen
+    | isMono ugen   = SC.mce2 ugen ugen
+    | otherwise     = error "Sound.Tomato.Synthesis: expecting mono generator"
 
 {-----------------------------------------------------------------------------
     Envelopes
@@ -149,28 +210,29 @@ type Envelope = Sound -> Sound
 --
 -- > xLine 1 (1/8) 3 $ sine 220
 xLine :: Behavior Double -> Behavior Double -> Behavior Duration -> Envelope
-xLine a b dur = (SC.xLine SC.AR a b dur SC.RemoveSynth *)
+xLine a b dur =
+    liftSound1 (SC.xLine SC.AR (getUGen a) (getUGen b) (getUGen dur) SC.RemoveSynth *)
 
 -- | Percussive envelope.
 percussive :: Behavior Duration -> Behavior Duration -> Envelope
-percussive attack release = (SC.envGen SC.AR gate 1 0 1 SC.RemoveSynth gens *)
+percussive attack release =
+    liftSound1 (SC.envGen SC.AR gate 1 0 1 SC.RemoveSynth gens *)
 	where
 	gate = 1
-	gens = SC.envPerc attack release
+	gens = SC.envPerc (getUGen attack) (getUGen release)
 
 {-----------------------------------------------------------------------------
     Tests
 ------------------------------------------------------------------------------}
--- TODO: Modulation! The following actually shouldn't type check
-testModulation = lowpass 4000 $ sawtooth $ 440 + 0.5*sine 10
+testModulation = lowpass 4000 $ sawtooth $ 440 + 0.5*sin 10
 
-testPan1 = pan (sine 0.2) $ lowpass 800 $ brownNoise
-testPan2 = pan (sine 0.2) $ sawtooth 220
+testPan1 = pan (sin 0.2) $ lowpass 800 $ brownNoise
+testPan2 = pan (sin 0.2) $ sine 220
 
 testXLine = xLine 1 (1/8) 3 $ sine 220
 testPluck = pluck 440
     where
-    pluck freq = percussive 0.02 0.9 $ sine (freq+10*sine 20)
+    pluck freq = percussive 0.02 0.9 $ sine (freq+10*sin 20)
 
 
 

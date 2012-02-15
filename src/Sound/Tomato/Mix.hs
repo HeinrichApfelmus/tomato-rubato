@@ -92,7 +92,7 @@ effect' :: String -> (Sound -> Sound) -> Audio -> Audio -> Mix ()
 effect' name f input output = do
     let synthName = name ++ show output
     newSynthDef synthName $ -- create synthesizer definition
-        stereoOut output . f $ stereoIn input
+        stereoOut output . soundToUGen . f . Sound $ stereoIn input
     group <- newGroup       -- allocate a new group ID
     liftIO $ newNode synthName group [] -- allocate node on the server and add it to group
     return ()
@@ -103,7 +103,8 @@ instrument addHandler gen = do
     output <- newChannel
     group  <- newGroup
     let synthName = "tomato-instrument" ++ show group
-    newSynthDef synthName $ stereoOut output (gen $ parameter "freq" 0)
+    newSynthDef synthName $
+        stereoOut output . soundToUGen . gen $ parameter "freq" 0
     liftIO $ addHandler $ \freq -> do
         -- allocate node on the server and add it to group
         -- this will start the sound
@@ -118,7 +119,7 @@ speakers input = effect' "tomato-speakers" id input 0 -- write to stereo output 
 -- | Merge several audio streams by mixing them.
 merge :: [Audio] -> Mix Audio
 merge []  = newChannel -- this channel is silent, but who am I to judge
-merge is  = effect (\_ -> foldr1 mix . map stereoIn $ is) undefined
+merge is  = effect (\_ -> foldr1 mix . map (Sound . stereoIn) $ is) undefined
     -- effect that simply mixes the different input channels
 
 {-----------------------------------------------------------------------------
