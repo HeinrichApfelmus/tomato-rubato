@@ -26,7 +26,7 @@ exampleMix loop = withSuperCollider $ do
 mix1 = do
     let loop fire = do
         c <- getChar
-        fire . pitchToFrequency . letterToPitch4 $ c
+        maybe (return ()) (fire . pitchToFrequency) $ letterToPitch c
     exampleMix loop
 
 -- Event loop that reads an external MIDI keyboard

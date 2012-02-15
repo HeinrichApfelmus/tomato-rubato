@@ -9,9 +9,11 @@ module Sound.Tomato.Theory (
     c,d,e,f,g,a,b,
     
     -- * Conversions
-    pitchToFrequency, letterToPitch4,
+    pitchToFrequency, letterToPitch,
     ) where
 
+import Data.List
+import Data.Functor
 import Sound.Tomato.Types
 
 {-----------------------------------------------------------------------------
@@ -28,10 +30,22 @@ c,d,e,f,g,a,b :: Int -> Pitch
 [a1,a2,a3,a4,a5,a6] = map a [1..6]
 [b1,b2,b3,b4,b5,b6] = map b [1..6]
 
+-- | Convert a MIDI pitch value into a frequency. Well-tempered tuning.
 pitchToFrequency :: Pitch -> Frequency
 pitchToFrequency pitch = 440 * 2**(fromIntegral (pitch-a4) / 12)
 
-letterToPitch4 :: Char -> Pitch
-letterToPitch4 x = case lookup x $ zip "cdefgab" [c,d,e,f,g,a,b] of
-    Nothing -> a4
-    Just p  -> p 4
+{-----------------------------------------------------------------------------
+    Poor man's keyboard
+------------------------------------------------------------------------------}
+-- | Poor man's keyboard.
+-- Turn an input character from your computer keyboard into a MIDI pitch value.
+-- Tries to mimic the layout of white and black keys on a piano keyboard.
+-- Uses the standard US layout.
+letterToPitch :: Char -> Maybe Pitch
+letterToPitch x = (3*12+) <$> elemIndex x englishUSKeyboard
+
+type KeyboardLayout = [Char]
+englishUSKeyboard :: KeyboardLayout
+englishUSKeyboard = "zsxdcvgbhnjm,l.;/q2w3e4rt6y7ui9o0p-[]"
+
+
