@@ -72,7 +72,8 @@ compileMix m = flip evalStateT (1000,33) m
 
 -- | Generate a new channel ID
 newChannel :: Mix Audio
-newChannel = do modify (second (+1)); snd <$> get
+newChannel = do modify (second (+2)); snd <$> get
+    -- increase number of channels by two as we want stereo signals
 
 stereoOut :: Int -> SC.UGen -> SC.UGen
 stereoOut = out . fromIntegral          -- stereo output
