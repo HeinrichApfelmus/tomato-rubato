@@ -11,9 +11,10 @@ module Sound.Tomato.Synthesis (
     
     -- * Parameters
     Behavior(..), parameter, Duration,
+    sineMod, HasOscillation(..),
     
     -- * Fundamental wave forms and sounds
-    sine, sawtooth, brownNoise,
+    sineOsc, sawtooth, brownNoise,
     
     -- * Sound processing and filters
     lowpass, highpass, bandpass, delay, pan,
@@ -83,9 +84,9 @@ type Sample = ()
 -- | The type @Behavior a@ represents a value that varies in time.
 -- 
 -- By using time-varying values as parameters, we can modulate them easily.
--- TODO: Opaque type. Different oscillators for audio and frequencies, etc.
 newtype Behavior a = B { getUGen :: SC.UGen } deriving (Eq,Show)
 
+liftBehavior1 :: (SC.UGen -> SC.UGen) -> Behavior a -> Behavior a 
 liftBehavior1 = liftNewtype1 B getUGen
 liftBehavior2 = liftNewtype2 B getUGen
 
@@ -102,21 +103,16 @@ instance Fractional (Behavior Double) where
     (/) = liftBehavior2 (/)
     fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
 
-instance Floating (Behavior Double) where
-    pi  = B $ SC.constant  pi
-    sin = liftBehavior1 $ \freq -> SC.sinOsc SC.AR freq (SC.constant 0)
-    -- other functions are yet to be implemented
-    cos = undefined
-    exp = undefined
-    log = undefined
-    asin = undefined
-    atan = undefined
-    acos = undefined
-    sinh = undefined
-    cosh = undefined
-    asinh = undefined
-    acosh = undefined
-    atanh = undefined
+-- | Sine wave modulation.
+-- Use 'sine' for convenient overloading.
+sineMod :: Behavior Frequency -> Behavior Frequency
+sineMod = liftBehavior1 $ \freq -> SC.sinOsc SC.AR freq (SC.constant 0)
+
+-- | Convenient overloading for modulation parameters and sound wave forms
+class HasOscillation a where
+    sine :: Behavior Frequency -> a
+
+instance HasOscillation (Behavior Frequency) where sine = sineMod
 
 -- | Represents a time duration in seconds.
 type Duration = Double
@@ -128,13 +124,16 @@ parameter name initialValue = B $ SC.control SC.KR name initialValue
 {-----------------------------------------------------------------------------
     Fundamental wave forms and sounds
 ------------------------------------------------------------------------------}
--- | Sine wave.
+-- | Sine oscillator.
+-- Use 'sine' for convenient overloading.
 --
 -- Sounds like a free telephone line.
-sine :: Behavior Frequency -> Sound
-sine freq = Sound $ monoToStereo $ SC.sinOsc SC.AR (getUGen freq) (SC.constant 0)
+sineOsc :: Behavior Frequency -> Sound
+sineOsc freq = Sound $ monoToStereo $ SC.sinOsc SC.AR (getUGen freq) (SC.constant 0)
 
--- | Sawtooth wave.
+instance HasOscillation Sound where sine = sineOsc
+
+-- | Sawtooth oscillator.
 -- 
 -- Rasping. Best used with a lowpass to smooth out the harsh high frequencies.
 sawtooth :: Behavior Frequency -> Sound
@@ -172,10 +171,12 @@ bandpass freq rq = liftSound1 $ \ugen -> SC.bpf ugen (getUGen freq) (getUGen rq)
 delay :: Behavior Duration -> Sound -> Sound
 delay duration = liftSound1 $ \ugen -> SC.delayN ugen (SC.constant 0.1) (getUGen duration)
 
--- | Equal power stereo pan a mono source.
+-- | Balance a stereo sound.
 -- Input from -1 (left speaker) to +1 (right speaker)
-pan :: Behavior Double -> Sound -> Sound
-pan position sound = Sound $ SC.balance2 l r (getUGen position) (SC.constant 1)
+--
+-- Note: This function is currently buggy.
+balance :: Behavior Double -> Sound -> Sound
+balance position sound = Sound $ SC.balance2 l r (getUGen position) (SC.constant 1)
     where (l,r) = getStereoChannels $ soundToUGen sound
 
 {-----------------------------------------------------------------------------
@@ -224,15 +225,15 @@ percussive attack release =
 {-----------------------------------------------------------------------------
     Tests
 ------------------------------------------------------------------------------}
-testModulation = lowpass 4000 $ sawtooth $ 440 + 0.5*sin 10
+testModulation = lowpass 4000 $ sawtooth $ 440 + 0.5*sine 10
 
-testPan1 = pan (sin 0.2) $ lowpass 800 $ brownNoise
-testPan2 = pan (sin 0.2) $ sine 220
+testPan1 = balance (sine 0.2) $ lowpass 800 $ brownNoise
+testPan2 = balance (sine 0.2) $ sine 220
 
 testXLine = xLine 1 (1/8) 3 $ sine 220
 testPluck = pluck 440
     where
-    pluck freq = percussive 0.02 0.9 $ sine (freq+10*sin 20)
+    pluck freq = percussive 0.02 0.9 $ sine (freq+10*sine 20)
 
 
 

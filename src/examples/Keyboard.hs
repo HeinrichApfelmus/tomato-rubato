@@ -9,7 +9,7 @@ import Sound.Tomato
 
 -- Example sound for the instrument
 pluck :: Behavior Frequency -> Sound
-pluck freq = percussive 0.02 0.9 $ sawtooth (freq+1*sin 20)
+pluck freq = percussive 0.02 0.9 $ sawtooth (freq+1*sine 20)
 
 -- Example instrument
 exampleMix loop = withSuperCollider $ do
@@ -17,7 +17,7 @@ exampleMix loop = withSuperCollider $ do
     
     compileMix $ do
         c1 <- instrument addHandler pluck
-        c2 <- effect (bandpass (1000+400*sin 0.5) 1) c1
+        c2 <- effect (bandpass (1000+400*sine 0.5) 1) c1
         speakers c2
 
     forever $ loop fire
