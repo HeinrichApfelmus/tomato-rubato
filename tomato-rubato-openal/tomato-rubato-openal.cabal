@@ -1,0 +1,33 @@
+Name:               tomato-rubato-openal
+Version:            0.1.0.0
+Synopsis:           Easy to use library for audio programming.
+Description:
+  WARNING: This project is still in pre-alpha stage. For adventurers only!
+  .
+  An easy to use library for live audio programming in Haskell.
+  Instant gratification from your speakers by typing into GHCi!
+  .
+  This module uses the OpenAL bindings.
+  .
+  WARNING: This project is still in pre-alpha stage. For adventurers only!
+  
+Category:           Data
+License:            BSD3
+License-file:       LICENSE
+Author:             Heinrich Apfelmus
+Maintainer:         Heinrich Apfelmus <apfelmus at quantentunnel de>
+Homepage:           http://www.haskell.org/haskellwiki/tomato-rubato
+Copyright:          (c) Heinrich Apfelmus 2012
+
+build-type:         Simple
+cabal-version:      >= 1.6
+
+source-repository head
+    type:           git
+    location:       git://github.com/HeinrichApfelmus/tomato-rubato.git
+    subdir:         tomato-rubato-openal/
+
+Library
+    hs-source-dirs:     src
+    build-depends:      base == 4.*, stm == 2.2.*, vector == 0.9.*, OpenAL == 1.4.*
+    exposed-modules:    Sound.Tomato.Speakers

@@ -13,6 +13,20 @@ See the **[project homepage][homepage]** for **documentation**, **examples** and
 
 ## Compilation and Installation
 
+### tomato-rubato.cabal
+
+Prerequisites:
+
+* The [OpenAL bindings][openal] for Haskell are used to output sound.
+
+* To install the tomato-rubato-openal libary, simply type
+
+        cd tomato-rubato-openal && cabal install
+
+  [openal]: http://hackage.haskell.org/package/OpenAL
+
+### tomato-rubato.cabal
+
 Prerequisites:
 
 * [SuperCollider 3][sc] serves as backend to generate the actual audio. Simply *install* one of the [prepackaged version][sc-downloads] on your computer and *start the server* before using tomato-rubato. (Let me know if you have any problems with this step.) The [corresponding Haskell bindings][sc-haskell] are installed by simply typing
