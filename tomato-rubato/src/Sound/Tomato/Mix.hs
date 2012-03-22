@@ -120,7 +120,7 @@ speakers input = effect' "tomato-speakers" id input 0 -- write to stereo output 
 -- | Merge several audio streams by mixing them.
 merge :: [Audio] -> Mix Audio
 merge []  = newChannel -- this channel is silent, but who am I to judge
-merge is  = effect (\_ -> foldr1 mix . map (Sound . stereoIn) $ is) undefined
+merge is  = effect (\_ -> mix . map (Sound . stereoIn) $ is) undefined
     -- effect that simply mixes the different input channels
 
 {-----------------------------------------------------------------------------

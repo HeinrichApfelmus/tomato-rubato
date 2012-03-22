@@ -10,17 +10,17 @@ module Sound.Tomato.Synthesis (
     Sound(..), mix, play, render,
     
     -- * Parameters
-    Behavior(..), parameter, Duration,
+    Behavior(..), constant, parameter, Duration,
     sineMod, HasOscillation(..),
     
     -- * Fundamental wave forms and sounds
-    sineOsc, sawtooth, brownNoise,
+    sineOsc, sawtooth, square, brownNoise, whiteNoise,
     
     -- * Sound processing and filters
-    lowpass, highpass, bandpass, delay, pan,
+    lowpass, highpass, bandpass, delay, balance,
     
     -- * Envelopes
-    Envelope, xLine, percussive,
+    Envelope, gain, xLine, percussive,
     
     -- * Internal
     ) where
@@ -50,21 +50,23 @@ newtype Sound = Sound { soundToUGen :: SC.UGen }
 liftSound1 = liftNewtype1 Sound soundToUGen
 liftSound2 = liftNewtype2 Sound soundToUGen
 
--- | Combine to sounds by mixing them.
-mix :: Sound -> Sound -> Sound
-mix = liftSound2 (+)
+-- | Combine serveral sounds by mixing them.
+mix :: [Sound] -> Sound
+mix = foldr1 (liftSound2 (+))
 
 -- | Play a sound on the speakers.
 -- Press any key to interrupt.
 play :: Sound -> IO ()
 play sound = SC.withSuperCollider $ do
-    SC.audition $ SC.out 0 (0.2 * soundToUGen sound)
+    audition sound
     getChar
     return ()
 
+audition = SC.audition . SC.out 0 . soundToUGen . gain (-20)
+
 instance Demonstrate Sound where
     demo sound = SC.withSuperCollider $ do
-        SC.audition $ SC.out 0 (0.2 * soundToUGen sound)
+        audition sound
         threadDelay $ 60*10^6 -- wait one minute
 
 -- TODO: Change the duration of an audio Behavior
@@ -86,6 +88,10 @@ type Sample = ()
 -- By using time-varying values as parameters, we can modulate them easily.
 newtype Behavior a = B { getUGen :: SC.UGen } deriving (Eq,Show)
 
+-- | Constant behavior
+constant :: Double -> Behavior Double
+constant = B . SC.constant
+
 liftBehavior1 :: (SC.UGen -> SC.UGen) -> Behavior a -> Behavior a 
 liftBehavior1 = liftNewtype1 B getUGen
 liftBehavior2 = liftNewtype2 B getUGen
@@ -102,6 +108,23 @@ instance Num (Behavior Double) where
 instance Fractional (Behavior Double) where
     (/) = liftBehavior2 (/)
     fromRational r = fromInteger (numerator r) / fromInteger (denominator r)
+
+instance Floating (Behavior Double) where
+    pi   = constant pi
+    (**) = liftBehavior2 (**)
+    exp  = liftBehavior1 exp
+    log  = liftBehavior1 log
+    sin  = liftBehavior1 sin
+    cos  = liftBehavior1 cos
+    tan  = liftBehavior1 tan
+    sinh  = liftBehavior1 sinh
+    cosh  = liftBehavior1 cosh
+    asin  = liftBehavior1 asin
+    acos  = liftBehavior1 acos
+    atan  = liftBehavior1 atan
+    asinh  = liftBehavior1 asinh
+    acosh  = liftBehavior1 acosh
+    atanh  = liftBehavior1 atanh
 
 -- | Sine wave modulation.
 -- Use 'sine' for convenient overloading.
@@ -139,6 +162,16 @@ instance HasOscillation Sound where sine = sineOsc
 sawtooth :: Behavior Frequency -> Sound
 sawtooth freq = Sound $ monoToStereo $ SC.saw SC.AR (getUGen freq)
 
+-- | Square oscillator.
+square :: Behavior Frequency -> Sound
+square freq = Sound $ monoToStereo $ SC.pulse SC.AR (getUGen freq) 0.5
+
+-- | White noise (incoherent)
+-- 
+-- Noise that is uniform over the whole spectrum.
+whiteNoise :: Sound
+whiteNoise = Sound $ monoToStereo $ SC.whiteNoise (0 :: Int) SC.AR
+
 -- | Brown noise (incoherent)
 -- 
 -- Generates brown noise, i.e. the spectrum falls off in power by 6 dB per octave.
@@ -161,9 +194,13 @@ highpass freq = liftSound1 $ \ugen -> SC.hpf ugen (getUGen freq)
 
 -- | Bandpass filter. (12 dB / octave)
 -- 
--- > bandpass frequency rq 
+-- The first argument is the frequency.
+-- The second one is the Q value, which measures the width of the 
+-- peak by comparing it to the center frequency.
+-- 
+-- @Q = frequency / half-width  = 0.5 .. 1000 @.
 bandpass :: Behavior Frequency -> Behavior Double -> Sound -> Sound
-bandpass freq rq = liftSound1 $ \ugen -> SC.bpf ugen (getUGen freq) (getUGen rq)
+bandpass freq q = liftSound1 $ \ugen -> SC.bpf ugen (getUGen freq) (1 / getUGen q)
 
 -- | Delay the sound by a specified amount of time.
 -- Useful for echo and chorus effects.
@@ -174,9 +211,10 @@ delay duration = liftSound1 $ \ugen -> SC.delayN ugen (SC.constant 0.1) (getUGen
 -- | Balance a stereo sound.
 -- Input from -1 (left speaker) to +1 (right speaker)
 --
--- Note: This function is currently buggy.
+-- TODO: The implementation is currently working around a bug in SuperCollider.
 balance :: Behavior Double -> Sound -> Sound
-balance position sound = Sound $ SC.balance2 l r (getUGen position) (SC.constant 1)
+balance position sound = Sound $
+    (if l /= r then SC.balance2 l r else SC.pan2 l) (getUGen position) (SC.constant 1)
     where (l,r) = getStereoChannels $ soundToUGen sound
 
 {-----------------------------------------------------------------------------
@@ -204,6 +242,16 @@ monoToStereo ugen
 -- loudness profile which indicates how the loudness of the sound varies over time.
 type Envelope = Sound -> Sound
 
+-- | Volume, measured in decibel.
+type Volume = Double
+
+-- | Increase (or decrease) volume by a given amount of decibel.
+gain :: Behavior Volume -> Envelope
+gain g = liftSound1 (fromDecibel (getUGen g) *)
+    where
+    fromDecibel dB = 10**(dB / 20)
+    -- toDecibel amplitude = 20 * log amplitude / log 10
+    
 -- | Exponential line envelope.
 --
 -- It's exponential because the human ear is used to a logarithmic scale.

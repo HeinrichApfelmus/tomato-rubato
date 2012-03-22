@@ -9,8 +9,7 @@ Description:
   This means that you have to install SuperCollider and start the server
   before using this library.
   .
-  Stability forecast: This is pre-alpha quality software.
-  Nothing works and everything changes.
+  WARNING: This project is still in pre-alpha stage. For adventurers only!
   
 Category:           Data
 License:            BSD3
@@ -28,13 +27,13 @@ extra-source-files: README.md
 source-repository head
     type:           git
     location:       git://github.com/HeinrichApfelmus/tomato-rubato.git
+    subdir:         tomato-rubato/
 
 Library
     hs-source-dirs:     src
     build-depends:      base == 4.*, containers == 0.4.*,
                         transformers == 0.2.*, process == 1.0.*,
                         hsc3 == 0.9.*, hosc == 0.9.*, PortMidi == 0.1.*
---    ghc-options:        -Wall
     exposed-modules:    Demonstrate,
                         Sound.Tomato,
                         Sound.Tomato.MIDI, 

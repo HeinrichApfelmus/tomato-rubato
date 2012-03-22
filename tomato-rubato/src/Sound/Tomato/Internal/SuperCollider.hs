@@ -30,4 +30,4 @@ initialize =
 withSuperCollider :: IO a -> IO a
 withSuperCollider = bracket_
     (withSC3 $ \fd -> send fd (g_new [(1, AddToTail, 0)]))
-    (withSC3 $ \fd -> send fd (n_free [1]))
+    (withSC3 $ \fd -> send fd (n_free [1]) >> send fd (g_new [(1, AddToTail, 0)]))
