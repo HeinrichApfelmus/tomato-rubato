@@ -24,6 +24,8 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Data.Int (Int16)
 
+import System.Info
+
 import qualified Data.Vector.Storable as V
 
 -- Code heavily adapated from from YampaSynth
@@ -187,11 +189,13 @@ deInitOpenAL (device,context,pSource,pBuffers) = do
     buffer pSource $= Nothing
     deleteObjectNames [pSource]
     deleteObjectNames pBuffers
-    currentContext $= Nothing
-    printErrors
-    destroyContext context
-    b <- closeDevice device
-    when (not b) $ fail "closing OpenAL device"
+    when (False) $ do
+        -- Not executing the code below fixes a crash on linux.
+        -- It's unproblematic on OS X, too, so why bother.
+        currentContext $= Nothing
+        destroyContext context
+        b <- closeDevice device
+        when (not b) $ fail "closing OpenAL device"
     printErrors
 
 -- | Print all OpenAL errors if applicable
