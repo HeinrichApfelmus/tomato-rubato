@@ -14,7 +14,7 @@ module Sound.Tomato.Synthesis (
     sineMod, HasOscillation(..),
     
     -- * Fundamental wave forms and sounds
-    sineOsc, sawtooth, square, brownNoise, whiteNoise,
+    sineOsc, sawtooth, square, pulse, brownNoise, whiteNoise,
     
     -- * Sound processing and filters
     lowpass, highpass, bandpass, delay, balance,
@@ -166,6 +166,15 @@ sawtooth freq = Sound $ monoToStereo $ SC.saw SC.AR (getUGen freq)
 square :: Behavior Frequency -> Sound
 square freq = Sound $ monoToStereo $ SC.pulse SC.AR (getUGen freq) 0.5
 
+-- | Pulse oscillator.
+-- Generalization of the square oscillator.
+--
+-- Basically, the square is no longer a square, but a rectangle
+-- with a width (0..1) given by the second argument.
+pulse :: Behavior Double -> Behavior Frequency -> Sound
+pulse width freq = Sound $ monoToStereo $
+    SC.pulse SC.AR (getUGen freq) (getUGen width)
+
 -- | White noise (incoherent)
 -- 
 -- Noise that is uniform over the whole spectrum.
@@ -257,10 +266,17 @@ gain g = liftSound1 (fromDecibel (getUGen g) *)
 -- It's exponential because the human ear is used to a logarithmic scale.
 -- For instance, the following produces a uniform decrease in loudness:
 --
+-- > xLine startValue endValue duration
 -- > xLine 1 (1/8) 3 $ sine 220
-xLine :: Behavior Double -> Behavior Double -> Behavior Duration -> Envelope
+-- xLine :: Behavior Double -> Behavior Double -> Behavior Duration -> Envelope
+-- xLine a b dur =
+--    liftSound1 (SC.xLine SC.AR (getUGen a) (getUGen b) (getUGen dur) SC.RemoveSynth *)
+
+xLine :: Behavior Double -> Behavior Double -> Behavior Duration -> Behavior Double
 xLine a b dur =
-    liftSound1 (SC.xLine SC.AR (getUGen a) (getUGen b) (getUGen dur) SC.RemoveSynth *)
+    B $ SC.xLine SC.AR (getUGen a) (getUGen b) (getUGen dur)
+    $ SC.DoNothing
+    -- DoneAction (getUGen b)
 
 -- | Percussive envelope.
 percussive :: Behavior Duration -> Behavior Duration -> Envelope
@@ -278,7 +294,7 @@ testModulation = lowpass 4000 $ sawtooth $ 440 + 0.5*sine 10
 testPan1 = balance (sine 0.2) $ lowpass 800 $ brownNoise
 testPan2 = balance (sine 0.2) $ sine 220
 
-testXLine = xLine 1 (1/8) 3 $ sine 220
+-- testXLine = xLine 1 (1/8) 3 $ sine 220
 testPluck = pluck 440
     where
     pluck freq = percussive 0.02 0.9 $ sine (freq+10*sine 20)
