@@ -1,23 +1,19 @@
 {-----------------------------------------------------------------------------
     tomato-rubato
 ------------------------------------------------------------------------------}
-module Sound.Tomato.Mix (
+module Sound.Tomato.Orchestra (
     -- * Synopsis
     -- | Sound mixing.
     -- 
-    -- While 'Sound.Tomato.Synthesis' is about the creation of individual
-    -- instrument sounds, 'Sound.Tomato.Mix' is about putting them together
-    -- in an orchestra that can be conducted via, say, MIDI events.
+    -- The module "Sound.Tomato.Orchestra" is about putting individual sounds
+    -- together in an orchestra that can be conducted via, say, MIDI events.
     
     -- * Setting up a Mix
     Audio, Mix, compileMix, withSuperCollider, 
     
     -- * Specifying instruments and effects
-    merge, instrument, effect, speakers,
-    
-    -- * Event Handling
-    Event, AddHandler, newAddHandler,
-    
+    merge, instrument, effect, speakers,    
+
     ) where
 
 import Control.Arrow (first, second)
@@ -25,16 +21,13 @@ import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import Data.Char
-import Data.IORef
-import Data.Functor
-import qualified Data.Map as Map
-import Data.Unique
 
 import Demonstrate
 
 import Sound.Tomato.MIDI
-import Sound.Tomato.Synthesis
-import Sound.Tomato.Theory
+import Sound.Tomato.Music
+import Sound.Tomato.Reactive
+import Sound.Tomato.Sound
 import Sound.Tomato.Types
 
 import Sound.SC3 (out, in')
@@ -100,7 +93,7 @@ effect' name f input output = do
 
 -- | Create a polyphonic instrument that can be triggered via an event.
 instrument :: Event Frequency -> (Behavior Frequency -> Sound) -> Mix Audio
-instrument addHandler gen = do
+instrument (Event addHandler) gen = do
     output <- newChannel
     group  <- newGroup
     let synthName = "tomato-instrument" ++ show group
@@ -159,23 +152,3 @@ newGroup = do
         g_new [(current,AddToTail,1)]
     return current
 
-{-----------------------------------------------------------------------------
-    Utilities
-------------------------------------------------------------------------------}
--- | Events are synonymous with facilities where we can register an event handler.
-type Event a      = AddHandler a
-
--- | A facility to register event handlers with. (Taken from reactive-banana)
-type AddHandler a = (a -> IO ()) -> IO (IO ())
-
--- | Build a facility to register and unregister event handlers.
-newAddHandler :: IO (AddHandler a, a -> IO ())
-newAddHandler = do
-    handlers <- newIORef Map.empty
-    let addHandler k = do
-            key <- newUnique
-            modifyIORef handlers $ Map.insert key k
-            return $ modifyIORef handlers $ Map.delete key
-        runHandlers x =
-            mapM_ ($ x) . map snd . Map.toList =<< readIORef handlers
-    return (addHandler, runHandlers)

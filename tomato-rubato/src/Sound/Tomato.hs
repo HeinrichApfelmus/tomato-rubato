@@ -3,14 +3,16 @@
 ------------------------------------------------------------------------------}
 module Sound.Tomato (
     module Sound.Tomato.MIDI,
-    module Sound.Tomato.Mix,
-    module Sound.Tomato.Synthesis,
-    module Sound.Tomato.Theory,
+    module Sound.Tomato.Music,
+    module Sound.Tomato.Orchestra,
+    module Sound.Tomato.Reactive,
+    module Sound.Tomato.Sound,
     module Sound.Tomato.Types
     ) where
 
 import Sound.Tomato.MIDI
-import Sound.Tomato.Mix
-import Sound.Tomato.Synthesis
-import Sound.Tomato.Theory
+import Sound.Tomato.Music
+import Sound.Tomato.Orchestra
+import Sound.Tomato.Reactive
+import Sound.Tomato.Sound
 import Sound.Tomato.Types

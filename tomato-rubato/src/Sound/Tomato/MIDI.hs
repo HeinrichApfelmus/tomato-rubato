@@ -15,7 +15,7 @@ import Data.IORef
 
 import Sound.PortMidi
 import Sound.Tomato.Types
-import Sound.Tomato.Theory
+import Sound.Tomato.Music
 
 -- instance Exception PMError
 

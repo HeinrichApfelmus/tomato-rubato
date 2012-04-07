@@ -7,10 +7,30 @@ type Name = String
 
 type Frequency = Double
 
+-- | Time duration in seconds.
+type Time = Double
+ms, s :: Time
+ms = 1e-3
+s  = 1
+
+type Semitones = Double
+octave :: Semitones
+octave = 12
+
+-- | Volume, measured in decibel.
+type Volume = Double
+dB :: Volume
+dB = 1
+
+-- | Duration of a musical note. (Full, half, quarter,..)
+type Duration = Int
+
+
 -- MIDI types
 
 data KeyDirection = KeyUp | KeyDown deriving (Eq,Ord,Show,Read)
-type Pitch        = Int			-- MIDI pitch value
+-- | MIDI pitch value
+type Pitch        = Int
 type Velocity     = Int
 
 data KeyPress = KeyPress

@@ -2,6 +2,7 @@
     tomato-rubato
 ------------------------------------------------------------------------------}
 import Demonstrate
+import Control.Monad
 import Sound.Tomato
 
 {-----------------------------------------------------------------------------
@@ -16,21 +17,28 @@ buzzingBass vel freq = lowpass (60*freq) $
     pulseWidth = 0.5 + 0.3 * sine 0.3
 
 
-kickDrum = percussive (0.1*ms) (400*ms) $ sine freqSweep
+kickDrum = percussive (0.1 *~ ms) (400 *~ ms) $ sine freqSweep
     where
     baseFreq = 55
     freqSweep =
-          xLine 4 1 (5 * ms)                    -- fast decay for the kick
-        * xLine (4*baseFreq) baseFreq (30 * ms) -- but keep a fat bump
+          xLine 4 1 (5 *~ ms)                    -- fast decay for the kick
+        * xLine (4*baseFreq) baseFreq (30 *~ ms) -- but keep a fat bump
 
-ms = 0.001 :: Behavior Duration
+
+playPattern synth = withSuperCollider $ withTimer $ \timer -> do
+    compileMix $ do
+        speakers =<< instrument
+            (55 <$ onTimer timer)
+            (const $ gain (-10) synth)
+    setInterval timer (0.5 * s)
+    forever $ return ()
+
+-- beat 4 4 ".___|.___|"
+
 
 {-----------------------------------------------------------------------------
     Utilities
 ------------------------------------------------------------------------------}
-type Semitones = Double
-octave = 12 :: Semitones
-
 -- Adjust a given frequency by a certain number of semitones
 detune :: Semitones -> Behavior Frequency -> Behavior Frequency
 detune s freq = constant (2**(s/12)) * freq

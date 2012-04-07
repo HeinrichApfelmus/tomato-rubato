@@ -2,24 +2,25 @@
     tomato-rubato
 ------------------------------------------------------------------------------}
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
-module Sound.Tomato.Synthesis (
+module Sound.Tomato.Sound (
     -- * Synopsis
     -- | Basic combinators for sound synthesis and processing.
     
-    -- * Sound data
+    -- * Sound
     Sound(..), mix, play, render,
     
-    -- * Parameters
-    Behavior(..), constant, parameter, Duration,
-    sineMod, HasOscillation(..),
+    -- * Behavior
+    Behavior(..), constant, (*~),
+    parameter, sineMod, HasOscillation(..),
     
-    -- * Fundamental wave forms and sounds
+    -- * Synthesis
+    -- ** Wave forms
     sineOsc, sawtooth, square, pulse, brownNoise, whiteNoise,
     
-    -- * Sound processing and filters
+    -- ** Filters
     lowpass, highpass, bandpass, delay, balance,
     
-    -- * Envelopes
+    -- ** Envelopes
     Envelope, gain, xLine, percussive,
     
     -- * Internal
@@ -46,7 +47,7 @@ liftNewtype2 on un f x y = on $ f (un x) (un y)
 newtype Sound = Sound { soundToUGen :: SC.UGen }
 -- Represented as a two-channel unit generator
 
--- | Lifting functions for sounds
+-- Lifting functions for sounds
 liftSound1 = liftNewtype1 Sound soundToUGen
 liftSound2 = liftNewtype2 Sound soundToUGen
 
@@ -70,18 +71,18 @@ instance Demonstrate Sound where
         threadDelay $ 60*10^6 -- wait one minute
 
 -- TODO: Change the duration of an audio Behavior
--- clip :: Duration -> Sound -> Sound
+-- clip :: Time -> Sound -> Sound
 -- clip = undefined
 
 -- | Render an audio Behavior to memory.
 -- NOT IMPLEMENTED YET.
-render :: Duration -> Sound -> Sample
+render :: Time -> Sound -> Sample
 render = undefined
 
 type Sample = ()
 
 {-----------------------------------------------------------------------------
-    Parameters
+    Behavior
 ------------------------------------------------------------------------------}
 -- | The type @Behavior a@ represents a value that varies in time.
 -- 
@@ -126,6 +127,10 @@ instance Floating (Behavior Double) where
     acosh  = liftBehavior1 acosh
     atanh  = liftBehavior1 atanh
 
+-- | Multiply with numeric value. Useful for units like 'ms'
+(*~) :: Behavior Double -> Double -> Behavior Double
+a *~ b = a * constant b
+
 -- | Sine wave modulation.
 -- Use 'sine' for convenient overloading.
 sineMod :: Behavior Frequency -> Behavior Frequency
@@ -136,9 +141,6 @@ class HasOscillation a where
     sine :: Behavior Frequency -> a
 
 instance HasOscillation (Behavior Frequency) where sine = sineMod
-
--- | Represents a time duration in seconds.
-type Duration = Double
 
 -- | Named parameter.
 parameter :: Name -> Double -> Behavior Double
@@ -214,7 +216,7 @@ bandpass freq q = liftSound1 $ \ugen -> SC.bpf ugen (getUGen freq) (1 / getUGen 
 -- | Delay the sound by a specified amount of time.
 -- Useful for echo and chorus effects.
 -- Maximum delay time is 0.1 seconds.
-delay :: Behavior Duration -> Sound -> Sound
+delay :: Behavior Time -> Sound -> Sound
 delay duration = liftSound1 $ \ugen -> SC.delayN ugen (SC.constant 0.1) (getUGen duration)
 
 -- | Balance a stereo sound.
@@ -251,9 +253,6 @@ monoToStereo ugen
 -- loudness profile which indicates how the loudness of the sound varies over time.
 type Envelope = Sound -> Sound
 
--- | Volume, measured in decibel.
-type Volume = Double
-
 -- | Increase (or decrease) volume by a given amount of decibel.
 gain :: Behavior Volume -> Envelope
 gain g = liftSound1 (fromDecibel (getUGen g) *)
@@ -268,18 +267,18 @@ gain g = liftSound1 (fromDecibel (getUGen g) *)
 --
 -- > xLine startValue endValue duration
 -- > xLine 1 (1/8) 3 $ sine 220
--- xLine :: Behavior Double -> Behavior Double -> Behavior Duration -> Envelope
+-- xLine :: Behavior Double -> Behavior Double -> Behavior Time -> Envelope
 -- xLine a b dur =
 --    liftSound1 (SC.xLine SC.AR (getUGen a) (getUGen b) (getUGen dur) SC.RemoveSynth *)
 
-xLine :: Behavior Double -> Behavior Double -> Behavior Duration -> Behavior Double
+xLine :: Behavior Double -> Behavior Double -> Behavior Time -> Behavior Double
 xLine a b dur =
     B $ SC.xLine SC.AR (getUGen a) (getUGen b) (getUGen dur)
     $ SC.DoNothing
     -- DoneAction (getUGen b)
 
 -- | Percussive envelope.
-percussive :: Behavior Duration -> Behavior Duration -> Envelope
+percussive :: Behavior Time -> Behavior Time -> Envelope
 percussive attack release =
     liftSound1 (SC.envGen SC.AR gate 1 0 1 SC.RemoveSynth gens *)
 	where

@@ -13,12 +13,6 @@ import System.IO
 import Sound.Tomato
 
 
-mapEvent :: (a -> b) -> Event a -> Event b
-mapEvent f addHandler g = addHandler (g . f)
-
-filterJust :: Event (Maybe a) -> Event a
-filterJust addHandler g = addHandler (maybe nop g)
-
 -- Test an instrument
 auditionMidi sound = withSuperCollider $ keyBoardLoop $
     \keydown -> compileMix $ speakers =<< instrument (toFreq keydown) sound

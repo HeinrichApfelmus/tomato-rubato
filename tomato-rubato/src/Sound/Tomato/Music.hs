@@ -1,15 +1,17 @@
 {-----------------------------------------------------------------------------
     tomato-rubato
 ------------------------------------------------------------------------------}
-module Sound.Tomato.Theory (
+module Sound.Tomato.Music (
     -- * Synopsis
-    -- | Music theory. Mapping note names to frequencies, etc.
+    -- | Musical notes, music theory, scales and chords.
+    -- Map note names to frequencies, describe melodies, etc.
     
-    -- * Pitch names
-    c,d,e,f,g,a,b,
+    -- * Rhythm
     
-    -- * Conversions
+    -- * Pitch
     pitchToFrequency, letterToPitch,
+    -- ** Pitch names
+    c,d,e,f,g,a,b,
     ) where
 
 import Data.List
@@ -17,7 +19,7 @@ import Data.Functor
 import Sound.Tomato.Types
 
 {-----------------------------------------------------------------------------
-    Note names and mappings
+    Pitch and note names
 ------------------------------------------------------------------------------}
 c,d,e,f,g,a,b :: Int -> Pitch
 [c,d,e,f,g,a,b] = map (\n octave -> n + 12*octave) [0,2,4,5,7,9,11]

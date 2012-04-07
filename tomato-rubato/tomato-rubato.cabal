@@ -37,9 +37,10 @@ Library
     exposed-modules:    Demonstrate,
                         Sound.Tomato,
                         Sound.Tomato.MIDI, 
-                        Sound.Tomato.Mix,
-                        Sound.Tomato.Synthesis,
-                        Sound.Tomato.Theory,
+                        Sound.Tomato.Music,
+                        Sound.Tomato.Orchestra,
+                        Sound.Tomato.Reactive,
+                        Sound.Tomato.Sound,
                         Sound.Tomato.Types
     other-modules:      Sound.Tomato.Internal.SuperCollider
 
