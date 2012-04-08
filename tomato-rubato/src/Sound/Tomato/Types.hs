@@ -5,7 +5,12 @@ module Sound.Tomato.Types where
 
 type Name = String
 
+-- | Frequency in Hz.
 type Frequency = Double
+
+hz, bpm :: Frequency
+hz  = 1
+bpm = 1/60
 
 -- | Time duration in seconds.
 type Time = Double

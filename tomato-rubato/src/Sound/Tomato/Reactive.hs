@@ -8,14 +8,11 @@ module Sound.Tomato.Reactive (
     -- TODO: Use reactive-banana for proper abstractions.
     
     -- * Event
-    Event, newEvent,
+    Event(..), newEvent, filterJust, filterE,
     module Data.Functor,
 
     -- * Timers
-    Timer, withTimer, onTimer, setInterval, stopTimer,
-    
-    -- * Internal
-    Event(..)
+    Timer, withTimer, onTimer, setFrequency, setInterval, stopTimer,
     ) where
 
 import Control.Applicative
@@ -34,7 +31,9 @@ import Sound.Tomato.Types
     Event
 ------------------------------------------------------------------------------}
 -- | Stream of event occurrences.
-newtype Event a = Event { addHandler :: AddHandler a }
+newtype Event a = Event
+    { addHandler :: AddHandler a -- ^ Internal use only.
+    }
 
 -- | A facility to register event handlers with. (Taken from reactive-banana)
 type AddHandler a = (a -> IO ()) -> IO (IO ())
@@ -69,6 +68,9 @@ instance Functor Event where
 filterJust :: Event (Maybe a) -> Event a
 filterJust (Event addHandler) = Event $ \g -> addHandler (maybe (return ()) g)
 
+-- | Keep only values that satisfy the predicate
+filterE :: (a -> Bool) -> Event a -> Event a
+filterE p = filterJust . fmap (\x -> if p x then Just x else Nothing)
 
 {-----------------------------------------------------------------------------
     Timer
@@ -81,13 +83,17 @@ withTimer :: (Timer -> IO a) -> IO a
 withTimer = bracket init stopTimer
     where init = Timer <$> newEvent <*> newIORef Nothing
 
+-- | Set frequency and star the 'Timer'
+setFrequency :: Timer -> Frequency -> IO ()
+setFrequency t freq = setInterval t (1/freq)
+
 -- | Set interval and start the 'Timer'
 setInterval :: Timer -> Time -> IO ()
 setInterval t@(Timer (_,fire) m) interval = do
     stopTimer t
     threadID <- forkIO $ forever $ do
-        fire ()
         threadDelay (ceiling $ 1e6 * interval)
+        fire ()
     writeIORef m $ Just threadID
 
 -- | Retrieve event from timer
