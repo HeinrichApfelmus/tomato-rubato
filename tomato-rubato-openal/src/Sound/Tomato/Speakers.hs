@@ -160,7 +160,7 @@ recycleBuffers s = forever $ do
         else do
             -- recycle the last used buffer
             buffer <- atomically $ readMyChan (usedBuffers s)
-            unqueueBuffers (source s) [buffer]
+            unqueueBuffers (source s) (fromIntegral 1) -- remove 1 buffer
             atomically $ writeMyChan (freeBuffers s) buffer
 
 -- | Wait for an OpenAL source to complete playing.
