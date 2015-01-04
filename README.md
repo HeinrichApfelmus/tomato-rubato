@@ -4,8 +4,6 @@ Tomato-rubato is an easy to use library for live audio programming in Haskell. I
 
 **WARNING: This project is still in pre-alpha stage. For adventurers only.**
 
-Support the project with a small donation: [![Flattr this](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/thing/502326/)
-
 See the **[project homepage][homepage]** for **documentation**, **examples** and so on.
 
   [homepage]: http://haskell.org/haskellwiki/Tomato-rubato
