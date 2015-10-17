@@ -189,6 +189,8 @@ deInitOpenAL (device,context,pSource,pBuffers) = do
     buffer pSource $= Nothing
     deleteObjectNames [pSource]
     deleteObjectNames pBuffers
+    -- printErrors causes a segfault on Linux if it is called after 
+    -- currentContext has been released, so call it here first.
     printErrors
     currentContext $= Nothing
     destroyContext context
