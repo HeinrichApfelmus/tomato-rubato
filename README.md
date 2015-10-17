@@ -11,7 +11,7 @@ See the **[project homepage][homepage]** for **documentation**, **examples** and
 
 ## Compilation and Installation
 
-### tomato-rubato.cabal
+### tomato-rubato-openal.cabal
 
 Prerequisites:
 
