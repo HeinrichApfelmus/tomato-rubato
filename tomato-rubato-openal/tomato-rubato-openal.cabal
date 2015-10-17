@@ -27,6 +27,8 @@ source-repository head
     location:       git://github.com/HeinrichApfelmus/tomato-rubato.git
     subdir:         tomato-rubato-openal/
 
+extra-Source-Files:  CHANGELOG.md
+
 Library
     hs-source-dirs:     src
     build-depends:      base == 4.*,
