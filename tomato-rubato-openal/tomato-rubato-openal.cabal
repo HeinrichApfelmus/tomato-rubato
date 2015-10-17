@@ -22,12 +22,12 @@ Copyright:          (c) Heinrich Apfelmus 2012
 build-type:         Simple
 cabal-version:      >= 1.6
 
+extra-source-files:  CHANGELOG.md
+
 source-repository head
     type:           git
     location:       git://github.com/HeinrichApfelmus/tomato-rubato.git
     subdir:         tomato-rubato-openal/
-
-extra-Source-Files:  CHANGELOG.md
 
 Library
     hs-source-dirs:     src
