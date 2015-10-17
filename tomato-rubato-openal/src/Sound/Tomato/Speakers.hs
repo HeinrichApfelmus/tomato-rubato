@@ -189,14 +189,13 @@ deInitOpenAL (device,context,pSource,pBuffers) = do
     buffer pSource $= Nothing
     deleteObjectNames [pSource]
     deleteObjectNames pBuffers
-    when (False) $ do
-        -- Not executing the code below fixes a crash on linux.
-        -- It's unproblematic on OS X, too, so why bother.
-        currentContext $= Nothing
-        destroyContext context
-        b <- closeDevice device
-        when (not b) $ fail "closing OpenAL device"
+    -- printErrors causes a segfault on Linux if it is called after 
+    -- currentContext has been released, so call it here first.
     printErrors
+    currentContext $= Nothing
+    destroyContext context
+    b <- closeDevice device
+    when (not b) $ fail "closing OpenAL device"
 
 -- | Print all OpenAL errors if applicable
 printErrors :: IO ()
