@@ -2,3 +2,4 @@
 /Materials/
 /*.tmproj
 /haddocks.html
+/.cabal-sandbox/
