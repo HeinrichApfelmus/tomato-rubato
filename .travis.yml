@@ -29,7 +29,7 @@ before_script:
   - cabal configure
   - cabal sdist
   - cd ../..
-  - tar -xf tomato-rubato-openal/tomato-rubato-openal/dist/tomato-rubato-openal*.tar.gz
+  - tar -xf tomato-rubato/tomato-rubato-openal/dist/tomato-rubato-openal*.tar.gz
   - cd tomato-rubato-openal*
 script:
   - cabal configure --enable-tests && cabal build && cabal test
